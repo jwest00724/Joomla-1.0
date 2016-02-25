@@ -36,9 +36,6 @@ switch( $task ) {
 		}
 		break;
 
-	case 'CheckIn':
-		CheckIn( $my->id, $access, $option );
-		break;
 
 	case 'cancel':
 		mosRedirect( 'index.php' );
@@ -82,7 +79,7 @@ function userEdit( $option, $uid, $submitvalue) {
 	$row->username = trim( $row->username );
 
 	$file 	= $mainframe->getPath( 'com_xml', 'com_users' );
-	$params =& new mosUserParameters( $row->params, $file, 'component' );
+	$params = new mosUserParameters( $row->params, $file, 'component' );
 
 	HTML_user::userEdit( $row, $option, $submitvalue, $params );
 }
@@ -172,113 +169,5 @@ function userSave( $option, $uid) {
 	mosRedirect( 'index.php', _USER_DETAILS_SAVE );
 }
 
-function CheckIn( $userid, $access, $option ){
-	global $database;
-	global $mosConfig_db;
 
-	$nullDate = $database->getNullDate();
-	if (!($access->canEdit || $access->canEditOwn || $userid > 0)) {
-		mosNotAuth();
-		return;
-	}
 
-	// security check to see if link exists in a menu
-	$link = 'index.php?option=com_user&task=CheckIn';
-	$query = "SELECT id"
-	. "\n FROM #__menu"
-	. "\n WHERE link LIKE '%$link%'"
-	. "\n AND published = 1"
-	;
-	$database->setQuery( $query );
-	$exists = $database->loadResult();
-	if ( !$exists ) {
-		mosNotAuth();
-		return;
-	}
-
-	$lt = mysql_list_tables($mosConfig_db);
-	$k = 0;
-	echo "<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\">";
-	while (list($tn) = mysql_fetch_array($lt)) {
-		// only check in the jos_* tables
-		if (strpos( $tn, $database->_table_prefix ) !== 0) {
-			continue;
-		}
-		$lf = mysql_list_fields($mosConfig_db, "$tn");
-		$nf = mysql_num_fields($lf);
-
-		$checked_out = false;
-		$editor = false;
-
-		for ($i = 0; $i < $nf; $i++) {
-			$fname = mysql_field_name($lf, $i);
-			if ( $fname == "checked_out") {
-				$checked_out = true;
-			} else if ( $fname == "editor") {
-				$editor = true;
-			}
-		}
-
-		if ($checked_out) {
-			if ($editor) {
-				$query = "SELECT checked_out, editor"
-				. "\n FROM `$tn`"
-				. "\n WHERE checked_out > 0"
-				. "\n AND checked_out = " . (int) $userid
-				;
-				$database->setQuery( $query );
-			} else {
-				$query = "SELECT checked_out"
-				. "\n FROM `$tn`"
-				. "\n WHERE checked_out > 0"
-				. "\n AND checked_out = " . (int) $userid
-				;
-				$database->setQuery( $query );
-			}
-			$res = $database->query();
-			$num = $database->getNumRows( $res );
-
-			if ($editor) {
-				$query = "UPDATE `$tn`"
-				. "\n SET checked_out = 0, checked_out_time = " . $database->Quote( $nullDate ) . ", editor = NULL"
-				. "\n WHERE checked_out > 0"
-				. "\n AND checked_out = " . (int) $userid
-				;
-				$database->setQuery( $query );
-			} else {
-				$query = "UPDATE `$tn`"
-				. "\n SET checked_out = 0, checked_out_time = " . $database->Quote( $nullDate )
-				. "\n WHERE checked_out > 0"
-				. "\n AND checked_out = " . (int) $userid
-				;
-				$database->setQuery( $query );
-			}
-			$res = $database->query();
-
-			if ($res == 1) {
-
-				if ($num > 0) {
-					echo "\n<tr class=\"row$k\">";
-					echo "\n	<td width=\"250\">";
-					echo _CHECK_TABLE;
-					echo " - $tn</td>";
-					echo "\n	<td>";
-					echo _CHECKED_IN;
-					echo "<b>$num</b>";
-					echo _CHECKED_IN_ITEMS;
-					echo "</td>";
-					echo "\n</tr>";
-				}
-				$k = 1 - $k;
-			}
-		}
-	}
-	?>
-	<tr>
-		<td colspan="2">
-			<b><?php echo _CONF_CHECKED_IN; ?></b>
-		</td>
-	</tr>
-	</table>
-	<?php
-}

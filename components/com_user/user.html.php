@@ -20,16 +20,16 @@ defined( '_VALID_MOS' ) or die( 'Restricted access' );
 * @subpackage Users
 */
 class HTML_user {
-	function frontpage() {
+	public static function frontpage() {
 		?>
 		<div class="componentheading">
-			<?php echo _WELCOME; ?>
+			404
 		</div>
 
 		<table cellpadding="0" cellspacing="0" border="0" width="100%">
 		<tr>
 			<td>
-				<?php echo _WELCOME_DESC; ?>
+				page not found
 			</td>
 		</tr>
 		</table>
